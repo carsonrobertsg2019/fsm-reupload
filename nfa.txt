@@ -1,0 +1,11 @@
+Q = {s0,s1,s2,s3};
+SIGMA = {a,b,c};
+DELTA = 
+{
+	DELTA(s0,$) = s1,
+	DELTA(s1,$) = s2,
+	DELTA(s1,a) = s2,
+	DELTA(s2,a) = s3
+};
+START_STATE = s0;
+F = {s0,s1,s3};
