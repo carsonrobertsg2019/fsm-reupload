@@ -2,10 +2,20 @@ Q = {s0,s1,s2,s3};
 SIGMA = {a,b,c};
 DELTA = 
 {
-	DELTA(s0,$) = s1,
-	DELTA(s1,$) = s2,
-	DELTA(s1,a) = s2,
-	DELTA(s2,a) = s3
+DELTA(s0,a) = s2,
+DELTA(s0,a) = s3,
+DELTA(s0,b) = s3,
+DELTA(s1,b) = s2,
+DELTA(s1,b) = s3,
+DELTA(s1,$) = s0,
+DELTA(s2,a) = s0,
+DELTA(s2,b) = s1,
+DELTA(s2,c) = s1,
+DELTA(s2,c) = s2,
+DELTA(s3,a) = s1,
+DELTA(s3,a) = s3,
+DELTA(s3,b) = s0,
+DELTA(s3,b) = s2
 };
 START_STATE = s0;
-F = {s0,s1,s3};
+F = {s0,s2};

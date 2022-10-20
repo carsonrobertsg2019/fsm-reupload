@@ -669,111 +669,104 @@ vector<int> nfaexecution::findAllTransitions(NfaParser M, int i, string w_ch)
 	return temp;
 }
 
-bool nfaexecution::startExecution(string w, NfaParser M)
+vector<string> nfaexecution::checkEpsilonTransitions(vector<string> currentStates, NfaParser M)
+{
+	string nextState = "";
+	bool changed = true;
+	while (changed)
+	{
+		changed = false;
+		for (int k = 0; k < currentStates.size(); k++)
+		{
+			int i = findCurrentStateInList(M, currentStates[k]);
+			vector<int> indicesOfEpTrans;
+			indicesOfEpTrans = findAllTransitions(M, i, "$");
+
+			for (int j = 0; j < indicesOfEpTrans.size(); j++)
+			{
+				nextState = M.listOfStates[i]->listOfTransitions[indicesOfEpTrans[j]]->transitionStateName;
+				bool unique = true;
+				for (int i = 0; i < currentStates.size(); i++)
+				{
+					if (currentStates[i] == nextState)
+					{
+						unique = false;
+					}
+				}
+				if (unique)
+				{
+					currentStates.push_back(nextState);
+					changed = true;
+				}
+			}
+		}
+	}
+	return currentStates;
+}
+
+vector<string> nfaexecution::readInputCharacter(vector<string> currentStates, string w, NfaParser M)
+{
+	string nextState = "";
+	string w_ch = w.substr(0, 1);
+	if (findInAlphabet(M, w_ch) == -1)
+	{
+		currentStates.clear();
+		currentStates.push_back("USER_INPUT_INVALID");
+	}
+	else
+	{
+		vector<string> originalCurrentStates = currentStates;
+		vector<string> newCurrentStates;
+		for (int k = 0; k < originalCurrentStates.size(); k++)
+		{
+			string tempLol = originalCurrentStates[k];
+			int i = findCurrentStateInList(M, tempLol);
+			vector<int> indicesOfChTrans;
+			indicesOfChTrans = findAllTransitions(M, i, w_ch);
+			for (int j = 0; j < indicesOfChTrans.size(); j++)
+			{
+				nextState = M.listOfStates[i]->listOfTransitions[indicesOfChTrans[j]]->transitionStateName;
+				newCurrentStates.push_back(nextState);
+			}
+		}
+		currentStates = newCurrentStates;
+	}
+	return currentStates;
+}
+
+
+string nfaexecution::startExecution(string w, NfaParser M)
 {
 	vector<string> currentStates;
 	currentStates.push_back(M.startState);
-	string nextState = "";
 	while (w.length() != 0)
 	{
 		//check for epsilon transitions until there are no more epsilon transitions
-		bool changed = true;
-		while (changed)
-		{
-			changed = false;
-			for (int k = 0; k < currentStates.size(); k++)
-			{
-				int i = findCurrentStateInList(M, currentStates[k]);
-				vector<int> indicesOfEpTrans;
-				indicesOfEpTrans = findAllTransitions(M, i, "$");
-
-				for (int j = 0; j < indicesOfEpTrans.size(); j++)
-				{
-					nextState = M.listOfStates[i]->listOfTransitions[indicesOfEpTrans[j]]->transitionStateName;
-					bool unique = true;
-					for (int i = 0; i < currentStates.size(); i++)
-					{
-						if (currentStates[i] == nextState)
-						{
-							unique = false;
-						}
-					}
-					if (unique)
-					{
-						currentStates.push_back(nextState);
-						changed = true;
-					}
-				}
-			}
-		}
+		currentStates = checkEpsilonTransitions(currentStates, M);
 		//now read a character from the input
-		string w_ch = w.substr(0, 1);
-		if (findInAlphabet(M, w_ch) == -1)
+		currentStates = readInputCharacter(currentStates, w, M);
+		if (currentStates.size() == 1 && currentStates[0] == "USER_INPUT_INVALID")
 		{
-			return false;
+			return currentStates[0];
 		}
-		else
-		{
-			w = w.substr(1, w.length());
-			for (int k = 0; k < currentStates.size(); k++)
-			{
-				string tempLol = currentStates[k];
-				int i = findCurrentStateInList(M, tempLol);
-				vector<int> indicesOfChTrans;
-				indicesOfChTrans = findAllTransitions(M, i, w_ch);
-				for (int j = 0; j < indicesOfChTrans.size(); j++)
-				{
-					nextState = M.listOfStates[i]->listOfTransitions[indicesOfChTrans[j]]->transitionStateName;
-					currentStates.push_back(nextState);
-				}
-				/*
-				*/
-			}
-		}
-		/*
-		* sort(currentStates.begin(), currentStates.end());
+		w = w.substr(1, w.length());
 		currentStates.erase(unique(currentStates.begin(), currentStates.end()), currentStates.end());
-		*/
-		w = "";
 	}
+	//check one more time before bed
+	currentStates = checkEpsilonTransitions(currentStates, M);
+	//sort so it looks pretty
+	sort(currentStates.begin(), currentStates.end());
+	currentStates.erase(unique(currentStates.begin(), currentStates.end()), currentStates.end());
 
 	for (int i = 0; i < currentStates.size(); i++)
 	{
-		cout << currentStates[i] << " ";
-	}
-	cout << endl;
-	return true;
-}
-
-/*
-bool dfaexecution::startExecution(string w, DfaParser M)
-{
-	string currentState = M.startState;
-	string nextState = "";
-	while (w.length() != 0)
-	{
-		string w_ch = w.substr(0, 1);
-		w = w.substr(1, w.length());
-		int i = findCurrentStateInList(M, currentState);
-		int j = findTransitionInList(M, i, w_ch);
-		if (i == -1 || j == -1)
+		if (std::find(M.finalStates.begin(), M.finalStates.end(), currentStates[i]) != M.finalStates.end())
 		{
-			cout << "invalid input string";
-			exit(-1);
-		}
-		currentState = M.listOfStates[i]->listOfTransitions[j]->transitionStateName;
-	}
-
-	for (int i = 0; i < M.finalStates.size(); i++)
-	{
-		if (M.finalStates[i] == currentState)
-		{
-			return true;
+			return "true";
 		}
 	}
-	return false;
+	return "false";
 }
-*/
 
 int main()
 {
@@ -889,7 +882,7 @@ int main()
 				while (userInNFA != "q")
 				{
 					cout << "Options: " << endl;
-					cout << "W: run the DFA on an input string w" << endl;
+					cout << "W: run the NFA on an input string w" << endl;
 					cout << "Q: quit" << endl;
 					cin >> userInNFA;
 					userInNFA = tolower(userInNFA[0]);
@@ -900,11 +893,19 @@ int main()
 						cout << "run M on w" << endl;
 						nfaexecution executor;
 						cin >> w;
-						executor.startExecution(w, nfaparser);
-						//if (executor.startExecution(w, dfaparser))
-						//	cout << "M accepts w" << endl;
-						//else
-						//	cout << "M does not accept w" << endl;
+						string result = executor.startExecution(w, nfaparser);
+						if (result == "true")
+						{
+							cout << "M accepts w" << endl;
+						}
+						else if (result == "false")
+						{
+							cout << "M does not accept w" << endl;
+						}
+						else
+						{
+							cout << "input string contained one or more characters not present in SIGMA" << endl;
+						}
 					}
 					else if (userInNFA == "q")
 					{
@@ -930,50 +931,4 @@ int main()
 			cout << "invalid input, try again" << endl;
 		}
 	}
-
-	//                                                                ,&#@#
-    //                                              #              *(*(%****(*
-	//										     ,@#%#@@,        .%**%**%*****/
-	//                       . & *******@ * &*********************#(****%*******(
-	//	                   / (*****/ @(****(/*******************(*******%********/(
-	//          	    *********/*&***&@@&#(/*************@#((%@@#***/# * *********%
-	//      		.& **********(% ********************************(***(/**********/
-	// 		      .(************/#****/@/@@/**************&, %*********(#**********/
-	//		     &***************#****%,     /**********(,     #*/(***(, .(****&
-	//		    /****************%***(*      /**********(  ..   #(/*(*   *&%*
-	//		    ./***************&***/( @@@@@&**********#@@@@@@#**(
-	//            &*************(******@@@%(@****#@@(*****(% #/*****%
-	//               &*********#%*************/*%@@@@@@@@#***********%.
-    //                  #/****% %**************/@@@@@@@@@@******//***#.
-	//                     &#   (****/**%&********#@@@@/*******&(**%
-	//		                     .#***&%%%********************&%#&
-	//                	       .@##%@/**&*********#(*@@@(**%(@##/
-	//		                    (##&. ,/*****************&/*%   &&%#(
-	//          	          .&#%   ,&%******************#      (@%#%
-    //                       .%%*   .@#%/***************/,        @#&#&
-	//                       @%,   .&(%###&/***********(@         @%/%#%
-    //     **&               @%  ,#****(%#####&&#@((@%###(       ,&%/ %#/
-    //      @*&              @%.%**********#&###&%%@##%%,        ,&%( (##
-    //       /*(             .%%*************/&#&*@.*#*#          ,#%/&#&
-    //       %*#            &*/&#&******#***&#%(#&@#%%*#
-	//       #*#          ./****/@#%#****#%#%%*******%(/,
-	//     .**&*         ./********/@####&#%   .(%    (**%
-    //     #*/ #		&****************%/           (***#
-	//    @**%    .,.  &*****************/#     *     (****(
-	//   .**(    ,****/(*****%***********%%    ..   ,&*****(
-	//	 @**(  ,/***********(************((         /******%
-    //  ,@***%@*************(/***********#*#        #*****(/***%
-    //   %/**#***************@***********#*(%     (%******//****#
-	//   ***%*****************#**********(***@.  /********(/*****%
-    //    &&*******************#*********%*****(.&%*********#******%%/*****#*/@.
-	//    /********************&********/(******************# * ****/&****//#&*****%
-	//    &*******************/ &*********(*****************/ (********%/,,,,%*%,&/*%.
-	//     #******************#(**********/(******#********//******%*,,,,,,,(***%#(*
-	//      (*******************#***********(#***&# * *********&/***/#,,,,(%****%,/*
-	//         @********#******&*#****#*%*****&**/*#*****%****%**/(*********(&.
-	//            @******%****(/##******%*****#**(******/#****#**#**/%
-	//             .%****&**(@    */****%*****%**( //***%*****#*%
-	//					              . .&/**%&@/
-
-	
 }
